@@ -49,23 +49,29 @@ class PlantasiaApp {
 
     // Universal MIDI CC mapping
     this.ccToSliderOrder = [
-      'filterSlider', 'delaySlider', 'echoSlider', 'volumeSlider',
-      'lfoRateSlider', 'lfoAmtSlider', 'bpmSlider', 'freqSlider'
+      'filterSlider',   // 1: Cutoff
+      'delaySlider',    // 2: Delay
+      'echoSlider',     // 3: Echo
+      'volumeSlider',   // 4: Volume
+      'lfoRateSlider',  // 5: LFO Rate
+      'lfoAmtSlider',   // 6: LFO Amt
+      'bpmSlider',      // 7: BPM
+      'freqSlider'      // 8: Freq Offset
     ];
-    this.ccToSliderMap = {};
+    this.ccToSliderMap = {}; // cc number -> slider id
 
     // UI
-    this.openDrawerBtn?.addEventListener('click', () => this.openDrawer());
-    this.closeDrawerBtn?.addEventListener('click', () => this.closeDrawer());
-    this.presetSelect?.addEventListener('change', () => this.onPresetChange());
-    this.waveformSelect?.addEventListener('change', () => this.userWaveform = this.waveformSelect.value);
-    this.bpmSlider?.addEventListener('input', () => this.onBpmChange());
-    this.lfoRateSlider?.addEventListener('input', () => this.updateLfoDisplay());
-    this.lfoAmtSlider?.addEventListener('input', () => this.updateLfoDisplay());
-    this.playBtn?.addEventListener('click', () => this.start());
-    this.stopBtn?.addEventListener('click', () => this.stop());
-    this.toggleDisplayBtn?.addEventListener('click', () => this.toggleDisplay());
-    this.volumeSlider?.addEventListener('input', () => this.setVolume());
+    this.openDrawerBtn.addEventListener('click', () => this.openDrawer());
+    this.closeDrawerBtn.addEventListener('click', () => this.closeDrawer());
+    this.presetSelect.addEventListener('change', () => this.onPresetChange());
+    this.waveformSelect.addEventListener('change', () => this.userWaveform = this.waveformSelect.value);
+    this.bpmSlider.addEventListener('input', () => this.onBpmChange());
+    this.lfoRateSlider.addEventListener('input', () => this.updateLfoDisplay());
+    this.lfoAmtSlider.addEventListener('input', () => this.updateLfoDisplay());
+    this.playBtn.addEventListener('click', () => this.start());
+    this.stopBtn.addEventListener('click', () => this.stop());
+    this.toggleDisplayBtn.addEventListener('click', () => this.toggleDisplay());
+    this.volumeSlider.addEventListener('input', () => this.setVolume());
     window.addEventListener('resize', () => this.debouncedResize());
 
     // Update LFO values UI
@@ -77,14 +83,12 @@ class PlantasiaApp {
     // MIDI Controls
     this.midiChannel = -1;
     this.midiInEnabled = true;
-    if (this.midiChannelSelect) {
-      this.midiChannelSelect.value = this.midiChannel;
-      this.midiChannelSelect.addEventListener('change', () => {
-        this.midiChannel = Number(this.midiChannelSelect.value);
-        console.log("MIDI channel set to", this.midiChannel);
-      });
-    }
-    this.toggleMidiInBtn?.addEventListener('click', () => {
+    this.midiChannelSelect.value = this.midiChannel;
+    this.midiChannelSelect.addEventListener('change', () => {
+      this.midiChannel = Number(this.midiChannelSelect.value);
+      console.log("MIDI channel set to", this.midiChannel);
+    });
+    this.toggleMidiInBtn.addEventListener('click', () => {
       this.midiInEnabled = !this.midiInEnabled;
       this.toggleMidiInBtn.textContent = "midi" + (this.midiInEnabled ? "" : " off");
       console.log("MIDI in", this.midiInEnabled ? "enabled" : "disabled");
@@ -128,12 +132,13 @@ class PlantasiaApp {
     const midi1 = data[1];
     const midi2 = data[2];
 
-    // Universal CC mapping
-    if (status === 0xB0) {
+    // Universal CC mapping: map first 8 unique CCs to sliders, then update those sliders
+    if (status === 0xB0) { // CC message
       const cc = midi1;
       const value = midi2;
       let sliderId = this.ccToSliderMap[cc];
       if (!sliderId) {
+        // map to next unused slider
         for (let s = 0; s < this.ccToSliderOrder.length; ++s) {
           const candidate = this.ccToSliderOrder[s];
           if (Object.values(this.ccToSliderMap).indexOf(candidate) === -1) {
@@ -186,7 +191,7 @@ class PlantasiaApp {
     params.midiNote = note;
 
     this.midiNotes[note] = this.playInstrument(params, undefined, true);
-    this.stopped = false;
+    this.stopped = false; // For fade logic: if keys held, not stopped!
     this.startAnimation();
   }
 
@@ -211,11 +216,13 @@ class PlantasiaApp {
       }
       delete this.midiNotes[note];
     }
+    // If no more MIDI notes are on and sequencer is stopped, start fade-out
     if (Object.keys(this.midiNotes).length === 0 && this.stopped) {
       // Let animate() handle fade out by shifting trailFrames
     }
   }
 
+  // --- Synthesis and app logic below (as before) ---
   getPresetOrder() {
     return [
       'plants','mold','bacteria','mushrooms','harmony',
@@ -248,8 +255,8 @@ class PlantasiaApp {
   getWaveformFromPreset() { return this.userWaveform || this.getPresetParams().waveform; }
 
   updateLfoDisplay() {
-    if (this.lfoRateValue) this.lfoRateValue.textContent = this.lfoRateSlider.value;
-    if (this.lfoAmtValue) this.lfoAmtValue.textContent = this.lfoAmtSlider.value;
+    this.lfoRateValue.textContent = this.lfoRateSlider.value;
+    this.lfoAmtValue.textContent = this.lfoAmtSlider.value;
   }
   setVolume() {
     if (this.masterGain)
@@ -295,21 +302,21 @@ class PlantasiaApp {
   animate() {
     if (!this.ctx || !this.analyser || !this.animationRunning) return;
     this.animationFrameId = requestAnimationFrame(() => this.animate());
-
-    // Visualizer trail logic, no canvas clear/fill here!
+    // Only push new frame data if not stopped or if MIDI notes are still held
     const midiActive = Object.keys(this.midiNotes).length > 0;
     if (!this.stopped || midiActive) {
       this.analyser.getByteTimeDomainData(this.dataArray);
-      if (this.trailFrames.length > 8) this.trailFrames.shift();
+      if (this.trailFrames.length > 8) this.trailFrames.shift(); // less dense, more classic
       this.trailFrames.push([...this.dataArray]);
     } else {
       if (this.trailFrames.length > 0) this.trailFrames.shift();
     }
 
-    // Draw waveform trails
     const grad = this.ctx.createLinearGradient(0, 0, this.canvas.width, 0);
     grad.addColorStop(0, this.currentWaveColor);
     grad.addColorStop(1, "#000000");
+
+    // Classic, less dense visualization
     this.ctx.lineWidth = 1.2;
     for (let t = 0; t < this.trailFrames.length; t++) {
       const data = this.trailFrames[t];
@@ -333,6 +340,7 @@ class PlantasiaApp {
       this.ctx.globalAlpha = 1.0;
     }
 
+    // When stopped and no more trailFrames, stop animation
     if (this.stopped && this.trailFrames.length === 0) {
       this.stopAnimation();
     }
@@ -371,7 +379,6 @@ class PlantasiaApp {
       clearInterval(this.bpmTimer);
       this.bpmTimer = null;
     }
-    // Do NOT call stopAnimation here!
   }
   onBpmChange() {
     this.bpm = parseInt(this.bpmSlider.value);
@@ -380,7 +387,7 @@ class PlantasiaApp {
   }
   onPresetChange() {
     this.userWaveform = null;
-    if (this.waveformSelect) this.waveformSelect.value = this.getPresetParams().waveform || "triangle";
+    this.waveformSelect.value = this.getPresetParams().waveform || "triangle";
     this.currentWaveColor = this.getColorFromPreset();
     if (!this.stopped)
       this.scheduleNotes(this.getScaleFromPreset());
@@ -411,6 +418,7 @@ class PlantasiaApp {
   playInstrument(params, when, forMIDI = false) {
     const now = this.audioCtx.currentTime;
     const startTime = when !== undefined ? when : now;
+    // Clean up finished notes (for sequencer only)
     if (!forMIDI) {
       this.polyNotes = this.polyNotes.filter(n => n.endTime > now);
       if (this.polyNotes.length > 8) {
@@ -453,6 +461,7 @@ class PlantasiaApp {
     const panNode = this.audioCtx.createStereoPanner();
     panNode.pan.value = typeof params.pan === "function" ? params.pan() : (params.pan || 0);
 
+    // LFO
     const lfoType = "sine";
     const lfoRate = parseFloat(this.lfoRateSlider.value);
     const lfoAmt = parseFloat(this.lfoAmtSlider.value);
@@ -505,17 +514,16 @@ class PlantasiaApp {
     }
   }
   openDrawer() {
-    if (!this.drawer) return;
     this.drawer.classList.remove('closed');
     this.drawer.classList.add('open');
-    if (this.openDrawerBtn) this.openDrawerBtn.style.display = 'none';
+    this.openDrawerBtn.style.display = 'none';
   }
   closeDrawer() {
-    if (!this.drawer) return;
     this.drawer.classList.remove('open');
     this.drawer.classList.add('closed');
-    if (this.openDrawerBtn) this.openDrawerBtn.style.display = '';
+    this.openDrawerBtn.style.display = '';
   }
 }
 
+// App entry
 document.addEventListener('DOMContentLoaded', () => new PlantasiaApp());
