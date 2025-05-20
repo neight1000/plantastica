@@ -302,11 +302,11 @@ class PlantasiaApp {
   animate() {
     if (!this.ctx || !this.analyser || !this.animationRunning) return;
     this.animationFrameId = requestAnimationFrame(() => this.animate());
-    // Only push new frame data if not stopped or if MIDI notes are still held
+
     const midiActive = Object.keys(this.midiNotes).length > 0;
     if (!this.stopped || midiActive) {
       this.analyser.getByteTimeDomainData(this.dataArray);
-      if (this.trailFrames.length > 8) this.trailFrames.shift(); // less dense, more classic
+      if (this.trailFrames.length > 8) this.trailFrames.shift();
       this.trailFrames.push([...this.dataArray]);
     } else {
       if (this.trailFrames.length > 0) this.trailFrames.shift();
@@ -316,7 +316,6 @@ class PlantasiaApp {
     grad.addColorStop(0, this.currentWaveColor);
     grad.addColorStop(1, "#000000");
 
-    // Classic, less dense visualization
     this.ctx.lineWidth = 1.2;
     for (let t = 0; t < this.trailFrames.length; t++) {
       const data = this.trailFrames[t];
@@ -340,7 +339,7 @@ class PlantasiaApp {
       this.ctx.globalAlpha = 1.0;
     }
 
-    // When stopped and no more trailFrames, stop animation
+    // Only stop the animation loop when the trail is empty and stopped!
     if (this.stopped && this.trailFrames.length === 0) {
       this.stopAnimation();
     }
@@ -379,6 +378,7 @@ class PlantasiaApp {
       clearInterval(this.bpmTimer);
       this.bpmTimer = null;
     }
+    // Do NOT call stopAnimation here! Let animate() fade out the visualizer.
   }
   onBpmChange() {
     this.bpm = parseInt(this.bpmSlider.value);
