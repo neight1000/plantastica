@@ -1,7 +1,6 @@
-// Plantastica v2 main logic: full featured synth with all controls as in the advanced HTML
 class PlantasiaApp {
   constructor() {
-    // DOM cache
+    // DOM cache...
     this.$ = id => document.getElementById(id);
     this.canvas = this.$('waveCanvas');
     this.ctx = this.canvas.getContext('2d');
@@ -37,6 +36,7 @@ class PlantasiaApp {
     this.stopped = true;
     this.bpm = parseInt(this.bpmSlider.value);
     this.polyNotes = [];
+    this.midiNotes = {}; // key: midi note number, value: {osc, ...}
     this.audioCtx = null;
     this.analyser = null;
     this.masterGain = null;
@@ -68,7 +68,7 @@ class PlantasiaApp {
     setInterval(() => this.updateDisplay(), 250);
 
     // MIDI Controls
-    this.midiChannel = 9;
+    this.midiChannel = -1;
     this.midiInEnabled = true;
     this.midiChannelSelect.value = this.midiChannel;
     this.midiChannelSelect.addEventListener('change', () => {
@@ -81,9 +81,8 @@ class PlantasiaApp {
       console.log("MIDI in", this.midiInEnabled ? "enabled" : "disabled");
     });
 
-    // ----- MIDI initialization -----
+    // MIDI initialization
     this.midiAccess = null;
-    this.activeMidiNotes = new Set();
     if (navigator.requestMIDIAccess) {
       navigator.requestMIDIAccess({ sysex: false }).then(
         (midiAccess) => this.onMIDISuccess(midiAccess),
@@ -100,7 +99,7 @@ class PlantasiaApp {
     for (let input of midiAccess.inputs.values()) {
       input.onmidimessage = (msg) => this.handleMIDIMessage(msg);
     }
-    midiAccess.onstatechange = (e) => {
+    midiAccess.onstatechange = () => {
       for (let input of midiAccess.inputs.values()) {
         input.onmidimessage = (msg) => this.handleMIDIMessage(msg);
       }
@@ -120,26 +119,23 @@ class PlantasiaApp {
     const note = data[1];
     const velocity = data[2];
 
-    // Channel filter: -1 means "all", otherwise match to this.midiChannel
+    // Honor "all" channel (-1)
     if (this.midiChannel !== -1 && channel !== this.midiChannel) return;
 
     if (status === 0x90 && velocity > 0) {
       // Note on
-      this.noteOn(note, velocity, channel);
-    } else if ((status === 0x80) || (status === 0x90 && velocity === 0)) {
+      this.noteOnMIDI(note, velocity, channel);
+    } else if (status === 0x80 || (status === 0x90 && velocity === 0)) {
       // Note off
-      this.noteOff(note, channel);
+      this.noteOffMIDI(note, channel);
     }
   }
 
-  noteOn(note, velocity, channel) {
-    // Convert MIDI note (0–127) to frequency
+  noteOnMIDI(note, velocity, channel) {
+    // Convert MIDI note to freq
     const freq = 440 * Math.pow(2, (note - 69) / 12);
-
-    // Velocity range: 0-127, map to 0.1–1.0
     const velGain = 0.1 + (velocity / 127) * 0.9;
 
-    // Play with the current synth engine
     if (!this.audioCtx) this.initAudio();
     if (this.audioCtx.state === "suspended") this.audioCtx.resume();
 
@@ -153,21 +149,40 @@ class PlantasiaApp {
     params.attack = params.attack || 0.01;
     params.release = params.release || 0.2;
     params.velocityGain = velGain;
+    params.midiNote = note;
 
-    // Store active note for noteOff
-    this.activeMidiNotes.add(note);
-
-    this.playInstrument(params);
-    // For debugging:
-    console.log(`MIDI Note ON: note=${note} freq=${freq.toFixed(2)} vel=${velocity} channel=${channel}`);
+    // Store the oscillator for this note so we can turn it off
+    this.midiNotes[note] = this.playInstrument(params, undefined, true);
+    // If visualizer isn't running, start it
+    this.startAnimation();
   }
 
-  noteOff(note, channel) {
-    // Remove from active notes
-    this.activeMidiNotes.delete(note);
-    // For simplicity, stop all notes (expand for true polyphony/note-matching if desired)
-    this.stop();
-    console.log(`MIDI Note OFF: note=${note} channel=${channel}`);
+  noteOffMIDI(note, channel) {
+    // Only stop this MIDI note
+    if (this.midiNotes[note]) {
+      const {oscillators, gainNode, lfo, lfoGain} = this.midiNotes[note];
+      if (oscillators) {
+        for (const osc of oscillators) {
+          try { osc.stop(); } catch {}
+          try { osc.disconnect(); } catch {}
+        }
+      }
+      if (gainNode) {
+        try { gainNode.disconnect(); } catch {}
+      }
+      if (lfo) {
+        try { lfo.stop(); } catch {}
+        try { lfo.disconnect(); } catch {}
+      }
+      if (lfoGain) {
+        try { lfoGain.disconnect(); } catch {}
+      }
+      delete this.midiNotes[note];
+    }
+    // If no more MIDI notes are on and not running sequencer, stop visualizer
+    if (Object.keys(this.midiNotes).length === 0 && this.stopped) {
+      this.stopAnimation();
+    }
   }
 
   // --- Synthesis and app logic below (as before) ---
@@ -315,7 +330,7 @@ class PlantasiaApp {
     this.stopped = true;
     clearInterval(this.bpmTimer);
     this.stopAnimation();
-    // Disconnect all active notes
+    // Disconnect all active notes (sequencer)
     for (const note of this.polyNotes) {
       if (note.osc) {
         try { note.osc.stop(); } catch {}
@@ -323,6 +338,8 @@ class PlantasiaApp {
       }
     }
     this.polyNotes = [];
+    // Disconnect all active MIDI notes
+    Object.keys(this.midiNotes).forEach(note => this.noteOffMIDI(Number(note)));
   }
   onBpmChange() {
     this.bpm = parseInt(this.bpmSlider.value);
@@ -359,17 +376,18 @@ class PlantasiaApp {
 
     this.playInstrument(params);
   }
-  playInstrument(params, when) {
+  playInstrument(params, when, forMIDI = false) {
     const now = this.audioCtx.currentTime;
     const startTime = when !== undefined ? when : now;
-    // Clean up finished notes
-    this.polyNotes = this.polyNotes.filter(n => n.endTime > now);
-    // Limit polyphony
-    if (this.polyNotes.length > 8) {
-      const oldNote = this.polyNotes.shift();
-      if (oldNote.osc) {
-        try { oldNote.osc.stop(); } catch {}
-        try { oldNote.osc.disconnect(); } catch {}
+    // Clean up finished notes (for sequencer only)
+    if (!forMIDI) {
+      this.polyNotes = this.polyNotes.filter(n => n.endTime > now);
+      if (this.polyNotes.length > 8) {
+        const oldNote = this.polyNotes.shift();
+        if (oldNote.osc) {
+          try { oldNote.osc.stop(); } catch {}
+          try { oldNote.osc.disconnect(); } catch {}
+        }
       }
     }
 
@@ -397,7 +415,8 @@ class PlantasiaApp {
 
     const gainNode = this.audioCtx.createGain();
     gainNode.gain.setValueAtTime(0, startTime);
-    gainNode.gain.linearRampToValueAtTime(0.3 * (params.velocityGain || 1), startTime + params.attack);
+    const attackGain = 0.3 * (params.velocityGain || 1);
+    gainNode.gain.linearRampToValueAtTime(attackGain, startTime + params.attack);
     gainNode.gain.linearRampToValueAtTime(0.0, startTime + params.attack + params.release);
 
     const panNode = this.audioCtx.createStereoPanner();
@@ -421,12 +440,12 @@ class PlantasiaApp {
         lfo.connect(lfoGain).connect(filterNode.frequency);
       else if (lfoDest === "pan")
         lfo.connect(lfoGain).connect(panNode.pan);
-      // No pitch LFO in this skeleton, but can be implemented as needed
       lfo.start(startTime);
       lfo.stop(startTime + params.attack + params.release + 0.1);
     }
 
     params.detuneCents = params.detuneCents || [-5, 0, 5];
+    const oscillators = [];
     params.detuneCents.forEach(offset => {
       const drift = (Math.random() - 0.5) * 6;
       const o = this.audioCtx.createOscillator();
@@ -437,7 +456,8 @@ class PlantasiaApp {
       o.start(startTime);
       o.stop(startTime + params.attack + params.release + 0.1);
       o.onended = () => { try { o.disconnect(); } catch {} };
-      this.polyNotes.push({osc: o, endTime: startTime + params.attack + params.release + 0.1});
+      if (!forMIDI) this.polyNotes.push({osc: o, endTime: startTime + params.attack + params.release + 0.1});
+      oscillators.push(o);
     });
 
     gainNode.connect(panNode);
@@ -449,6 +469,10 @@ class PlantasiaApp {
     delayNode.connect(reverbSend);
     reverbSend.connect(this.reverbNode);
     gainNode.connect(this.analyser);
+
+    if (forMIDI) {
+      return {oscillators, gainNode, lfo, lfoGain};
+    }
   }
   openDrawer() {
     this.drawer.classList.remove('closed');
