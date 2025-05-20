@@ -49,16 +49,10 @@ class PlantasiaApp {
 
     // Universal MIDI CC mapping
     this.ccToSliderOrder = [
-      'filterSlider',   // 1: Cutoff
-      'delaySlider',    // 2: Delay
-      'echoSlider',     // 3: Echo
-      'volumeSlider',   // 4: Volume
-      'lfoRateSlider',  // 5: LFO Rate
-      'lfoAmtSlider',   // 6: LFO Amt
-      'bpmSlider',      // 7: BPM
-      'freqSlider'      // 8: Freq Offset
+      'filterSlider', 'delaySlider', 'echoSlider', 'volumeSlider',
+      'lfoRateSlider', 'lfoAmtSlider', 'bpmSlider', 'freqSlider'
     ];
-    this.ccToSliderMap = {}; // cc number -> slider id
+    this.ccToSliderMap = {};
 
     // UI
     this.openDrawerBtn?.addEventListener('click', () => this.openDrawer());
@@ -134,13 +128,12 @@ class PlantasiaApp {
     const midi1 = data[1];
     const midi2 = data[2];
 
-    // Universal CC mapping: map first 8 unique CCs to sliders, then update those sliders
-    if (status === 0xB0) { // CC message
+    // Universal CC mapping
+    if (status === 0xB0) {
       const cc = midi1;
       const value = midi2;
       let sliderId = this.ccToSliderMap[cc];
       if (!sliderId) {
-        // map to next unused slider
         for (let s = 0; s < this.ccToSliderOrder.length; ++s) {
           const candidate = this.ccToSliderOrder[s];
           if (Object.values(this.ccToSliderMap).indexOf(candidate) === -1) {
@@ -193,7 +186,7 @@ class PlantasiaApp {
     params.midiNote = note;
 
     this.midiNotes[note] = this.playInstrument(params, undefined, true);
-    this.stopped = false; // For fade logic: if keys held, not stopped!
+    this.stopped = false;
     this.startAnimation();
   }
 
@@ -218,13 +211,11 @@ class PlantasiaApp {
       }
       delete this.midiNotes[note];
     }
-    // If no more MIDI notes are on and sequencer is stopped, start fade-out
     if (Object.keys(this.midiNotes).length === 0 && this.stopped) {
       // Let animate() handle fade out by shifting trailFrames
     }
   }
 
-  // --- Synthesis and app logic below (as before) ---
   getPresetOrder() {
     return [
       'plants','mold','bacteria','mushrooms','harmony',
@@ -305,6 +296,7 @@ class PlantasiaApp {
     if (!this.ctx || !this.analyser || !this.animationRunning) return;
     this.animationFrameId = requestAnimationFrame(() => this.animate());
 
+    // Visualizer trail logic, no canvas clear/fill here!
     const midiActive = Object.keys(this.midiNotes).length > 0;
     if (!this.stopped || midiActive) {
       this.analyser.getByteTimeDomainData(this.dataArray);
@@ -314,12 +306,10 @@ class PlantasiaApp {
       if (this.trailFrames.length > 0) this.trailFrames.shift();
     }
 
-    // No canvas clear/fill here! Trails fade visually via trailFrames only.
-
+    // Draw waveform trails
     const grad = this.ctx.createLinearGradient(0, 0, this.canvas.width, 0);
     grad.addColorStop(0, this.currentWaveColor);
     grad.addColorStop(1, "#000000");
-
     this.ctx.lineWidth = 1.2;
     for (let t = 0; t < this.trailFrames.length; t++) {
       const data = this.trailFrames[t];
@@ -343,7 +333,6 @@ class PlantasiaApp {
       this.ctx.globalAlpha = 1.0;
     }
 
-    // Only stop the animation loop when the trail is empty and stopped!
     if (this.stopped && this.trailFrames.length === 0) {
       this.stopAnimation();
     }
@@ -382,7 +371,7 @@ class PlantasiaApp {
       clearInterval(this.bpmTimer);
       this.bpmTimer = null;
     }
-    // Do NOT call stopAnimation here! Let animate() fade out the visualizer.
+    // Do NOT call stopAnimation here!
   }
   onBpmChange() {
     this.bpm = parseInt(this.bpmSlider.value);
@@ -422,7 +411,6 @@ class PlantasiaApp {
   playInstrument(params, when, forMIDI = false) {
     const now = this.audioCtx.currentTime;
     const startTime = when !== undefined ? when : now;
-    // Clean up finished notes (for sequencer only)
     if (!forMIDI) {
       this.polyNotes = this.polyNotes.filter(n => n.endTime > now);
       if (this.polyNotes.length > 8) {
@@ -465,7 +453,6 @@ class PlantasiaApp {
     const panNode = this.audioCtx.createStereoPanner();
     panNode.pan.value = typeof params.pan === "function" ? params.pan() : (params.pan || 0);
 
-    // LFO
     const lfoType = "sine";
     const lfoRate = parseFloat(this.lfoRateSlider.value);
     const lfoAmt = parseFloat(this.lfoAmtSlider.value);
@@ -531,5 +518,4 @@ class PlantasiaApp {
   }
 }
 
-// App entry
 document.addEventListener('DOMContentLoaded', () => new PlantasiaApp());
