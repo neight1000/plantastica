@@ -1,5 +1,5 @@
 // Plantastica v2 main logic: full featured synth with all controls as in the advanced HTML
-// Now with robust Akai MPK Mini MIDI mappings for dials (CC) and keyboard, and rock-solid STOP/PLAY behavior
+// Now with robust Akai MPK Mini (K1-K8) MIDI mappings for dials and keyboard, and rock-solid STOP/PLAY behavior
 
 class PlantasiaApp {
   constructor() {
@@ -50,16 +50,30 @@ class PlantasiaApp {
     this.animationFrameId = null;
     this.resizeTimeout = null;
 
-    // Akai MPK Mini: CC 1-8 map to the 8 knobs by default
+    /**
+     * AKAI MPK MINI (K1-K8) MIDI MAPPING
+     * Most Akai MPK Mini controllers send CC 70-77 for K1-K8 by default.
+     * If your MPK Mini is set differently, update the cc numbers here.
+     * 
+     * Mapping:
+     * K1 (CC70): Filter Cutoff      -> filterSlider
+     * K2 (CC71): Resonance (not present, use Delay) -> delaySlider
+     * K3 (CC72): LFO Rate           -> lfoRateSlider
+     * K4 (CC73): LFO Amount         -> lfoAmtSlider
+     * K5 (CC74): Echo/FX Amount     -> echoSlider
+     * K6 (CC75): Volume             -> volumeSlider
+     * K7 (CC76): BPM                -> bpmSlider
+     * K8 (CC77): Frequency offset   -> freqSlider
+     */
     this.mpminiCCMap = {
-      1: 'lfoAmtSlider',
-      2: 'lfoRateSlider',
-      3: 'filterSlider',
-      4: 'volumeSlider',
-      5: 'delaySlider',
-      6: 'echoSlider',
-      7: 'bpmSlider',
-      8: 'freqSlider'
+      70: 'filterSlider',   // K1
+      71: 'delaySlider',    // K2 (use delay for "resonance" knob if not present)
+      72: 'lfoRateSlider',  // K3
+      73: 'lfoAmtSlider',   // K4
+      74: 'echoSlider',     // K5
+      75: 'volumeSlider',   // K6
+      76: 'bpmSlider',      // K7
+      77: 'freqSlider'      // K8
     };
 
     // UI
@@ -134,7 +148,7 @@ class PlantasiaApp {
     const note = data[1];
     const velocity = data[2];
 
-    // --- Akai MPK Mini CC Dials mapping ---
+    // --- Akai MPK Mini K1-K8 MIDI CC Dials mapping ---
     if ((data[0] & 0xf0) === 0xB0) { // CC message
       const cc = data[1];
       const value = data[2];
