@@ -5,6 +5,7 @@ body {
   color: #fff;
   font-family: 'Fira Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
   overflow: hidden;
+  font-size: 9px; /* Set global font size */
 }
 #waveCanvas {
   position: fixed;
@@ -21,7 +22,7 @@ body {
   left: 16px;
   background: rgba(0,0,0,0.85);
   color: #fff;
-  font-size: 1.05em;
+  font-size: 9px;
   padding: 8px 16px 8px 12px;
   border-radius: 0;
   border: 1px solid #fff;
@@ -39,7 +40,7 @@ body {
   right: 20px;
   top: 18px;
   z-index: 11;
-  font-size: 24px;
+  font-size: 9px;
   background: #000;
   color: #fff;
   border: 1px solid #fff;
@@ -66,7 +67,7 @@ body {
   border-radius: 0;
   border-left: 1px solid #fff;
   z-index: 12;
-  font-size: 1em;
+  font-size: 9px;
   transition: right 0.22s cubic-bezier(.33,1.61,.34,.98);
   display: flex;
   flex-direction: column;
@@ -82,7 +83,7 @@ body {
 }
 #drawer label {
   display: block;
-  font-size: 1em;
+  font-size: 9px;
   color: #fff;
   margin-bottom: 2px;
   font-weight: bold;
@@ -104,7 +105,7 @@ body {
   border: 1px solid #fff;
   border-radius: 0;
   padding: 7px 16px;
-  font-size: 1.1em;
+  font-size: 9px;
   font-family: inherit;
   margin: 5px 0 0 0;
   cursor: pointer;
@@ -119,7 +120,7 @@ body {
   position: absolute;
   top: 12px;
   right: 10px;
-  font-size: 1.6em;
+  font-size: 9px;
   background: none;
   color: #fff;
   border: none;
@@ -144,7 +145,7 @@ body {
 }
 .mod-row label {
   min-width: 70px;
-  font-size: 0.99em;
+  font-size: 9px;
   margin: 0;
   color: #fff;
 }
