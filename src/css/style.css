@@ -1,58 +1,135 @@
 html, body {
   margin: 0;
   padding: 0;
-  background: black;
-  color: white;
-  font-family: monospace;
+  background: #0b100e;
+  color: #f8fff7;
+  font-family: 'Fira Mono', monospace;
   overflow: hidden;
 }
+
 canvas {
   position: absolute;
-  top: 0;
   left: 0;
+  top: 0;
   width: 100vw;
   height: 100vh;
-  z-index: 0;
-  background: transparent; /* ensure transparency for trails */
-  display: block;
-}
-.ui {
-  position: absolute;
-  bottom: 0;
-  width: 100%;
-  background: rgba(0, 0, 0, 0.85);
-  padding: 10px;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-  z-index: 2;
-}
-.ui label {
-  font-size: 10px;
-  display: block;
-  text-align: center;
-}
-.ui input[type="range"], .ui select {
-  width: 90px;
-}
-.ui button {
-  font-size: 12px;
-  padding: 4px 8px;
   background: transparent;
-  border: 1px solid white;
-  color: white;
+  display: block;
+  z-index: 1;
+}
+
+/* Drawer styles */
+#drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 320px;
+  height: 100vh;
+  background: rgba(18, 31, 22, 0.97);
+  color: #fff;
+  box-shadow: -4px 0 24px 0 rgba(0,0,0,0.18);
+  z-index: 10;
+  padding: 32px 18px 24px 18px;
+  transition: transform 0.4s cubic-bezier(.7,.3,.2,1);
+  transform: translateX(0);
+  overflow-y: auto;
+}
+#drawer.closed {
+  transform: translateX(100%);
+}
+#drawer.open {
+  transform: translateX(0%);
+}
+#openDrawer {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 11;
+  background: #354a36;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 4px;
+  box-shadow: 0 1px 7px 0 rgba(0,0,0,0.12);
+}
+#closeDrawer {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: transparent;
+  color: #fff;
+  border: none;
+  font-size: 24px;
   cursor: pointer;
 }
+
+#drawer label {
+  font-size: 13px;
+  margin-top: 16px;
+  margin-bottom: 3px;
+  display: block;
+}
+
+#drawer input[type="range"],
+#drawer input[type="number"],
+#drawer select {
+  width: 100%;
+  margin-bottom: 7px;
+  background: #232e25;
+  color: #fff;
+  border: 1px solid #3a4c3a;
+  border-radius: 4px;
+  padding: 4px;
+}
+
+#drawer input[type="range"] {
+  height: 24px;
+}
+
+#drawer button,
+#drawer select {
+  background: #354a36;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  margin-top: 6px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+#drawer button:hover,
+#drawer select:hover {
+  background: #46624a;
+}
+
+#drawer .row {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+#drawer .row label {
+  margin: 0;
+}
+#drawer .row > * {
+  flex: 1;
+}
+
 #infoDisplay {
   position: absolute;
   top: 10px;
   left: 10px;
-  z-index: 3;
-  background: rgba(0, 0, 0, 0.6);
-  color: white;
-  font-size: 12px;
-  padding: 10px;
+  z-index: 2;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  font-size: 13px;
+  padding: 12px;
+  border-radius: 6px;
   display: none;
   white-space: pre;
+  pointer-events: none;
+  box-shadow: 0 2px 18px 0 rgba(0,0,0,0.16);
 }
