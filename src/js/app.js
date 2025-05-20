@@ -1,5 +1,4 @@
 // Plantastica v2 main logic: full featured synth with all controls as in the advanced HTML
-
 class PlantasiaApp {
   constructor() {
     // DOM cache
@@ -64,25 +63,114 @@ class PlantasiaApp {
 
     // Update LFO values UI
     this.updateLfoDisplay();
-
-    // Set initial canvas size and UI state
     this.setCanvasSize();
     this.onPresetChange();
     setInterval(() => this.updateDisplay(), 250);
 
-    // MIDI (minimal, see original for full)
+    // MIDI Controls
     this.midiChannel = 9;
     this.midiInEnabled = true;
     this.midiChannelSelect.value = this.midiChannel;
     this.midiChannelSelect.addEventListener('change', () => {
       this.midiChannel = Number(this.midiChannelSelect.value);
+      console.log("MIDI channel set to", this.midiChannel);
     });
     this.toggleMidiInBtn.addEventListener('click', () => {
       this.midiInEnabled = !this.midiInEnabled;
       this.toggleMidiInBtn.textContent = "midi" + (this.midiInEnabled ? "" : " off");
+      console.log("MIDI in", this.midiInEnabled ? "enabled" : "disabled");
     });
+
+    // ----- MIDI initialization -----
+    this.midiAccess = null;
+    this.activeMidiNotes = new Set();
+    if (navigator.requestMIDIAccess) {
+      navigator.requestMIDIAccess({ sysex: false }).then(
+        (midiAccess) => this.onMIDISuccess(midiAccess),
+        () => this.onMIDIFailure()
+      );
+    } else {
+      console.warn("Web MIDI API not supported in this browser.");
+    }
   }
 
+  // --- MIDI methods ---
+  onMIDISuccess(midiAccess) {
+    this.midiAccess = midiAccess;
+    for (let input of midiAccess.inputs.values()) {
+      input.onmidimessage = (msg) => this.handleMIDIMessage(msg);
+    }
+    midiAccess.onstatechange = (e) => {
+      for (let input of midiAccess.inputs.values()) {
+        input.onmidimessage = (msg) => this.handleMIDIMessage(msg);
+      }
+    };
+    console.log("MIDI ready!");
+  }
+
+  onMIDIFailure() {
+    console.warn("Could not access your MIDI devices.");
+  }
+
+  handleMIDIMessage(event) {
+    if (!this.midiInEnabled) return;
+    const data = event.data;
+    const status = data[0] & 0xf0;
+    const channel = data[0] & 0x0f;
+    const note = data[1];
+    const velocity = data[2];
+
+    // Channel filter: -1 means "all", otherwise match to this.midiChannel
+    if (this.midiChannel !== -1 && channel !== this.midiChannel) return;
+
+    if (status === 0x90 && velocity > 0) {
+      // Note on
+      this.noteOn(note, velocity, channel);
+    } else if ((status === 0x80) || (status === 0x90 && velocity === 0)) {
+      // Note off
+      this.noteOff(note, channel);
+    }
+  }
+
+  noteOn(note, velocity, channel) {
+    // Convert MIDI note (0–127) to frequency
+    const freq = 440 * Math.pow(2, (note - 69) / 12);
+
+    // Velocity range: 0-127, map to 0.1–1.0
+    const velGain = 0.1 + (velocity / 127) * 0.9;
+
+    // Play with the current synth engine
+    if (!this.audioCtx) this.initAudio();
+    if (this.audioCtx.state === "suspended") this.audioCtx.resume();
+
+    const params = { ...this.getPresetParams() };
+    params.freq = freq;
+    params.waveform = this.getWaveformFromPreset();
+    params.delay = parseFloat(this.delaySlider.value);
+    params.echo = parseFloat(this.echoSlider.value);
+    params.filterFreq = parseFloat(this.filterSlider.value);
+    params.reverb = 0.3 + parseFloat(this.echoSlider.value) * 0.5;
+    params.attack = params.attack || 0.01;
+    params.release = params.release || 0.2;
+    params.velocityGain = velGain;
+
+    // Store active note for noteOff
+    this.activeMidiNotes.add(note);
+
+    this.playInstrument(params);
+    // For debugging:
+    console.log(`MIDI Note ON: note=${note} freq=${freq.toFixed(2)} vel=${velocity} channel=${channel}`);
+  }
+
+  noteOff(note, channel) {
+    // Remove from active notes
+    this.activeMidiNotes.delete(note);
+    // For simplicity, stop all notes (expand for true polyphony/note-matching if desired)
+    this.stop();
+    console.log(`MIDI Note OFF: note=${note} channel=${channel}`);
+  }
+
+  // --- Synthesis and app logic below (as before) ---
   getPresetOrder() {
     return [
       'plants','mold','bacteria','mushrooms','harmony',
@@ -230,12 +318,8 @@ class PlantasiaApp {
     // Disconnect all active notes
     for (const note of this.polyNotes) {
       if (note.osc) {
-        try {
-          note.osc.stop();
-        } catch {}
-        try {
-          note.osc.disconnect();
-        } catch {}
+        try { note.osc.stop(); } catch {}
+        try { note.osc.disconnect(); } catch {}
       }
     }
     this.polyNotes = [];
@@ -313,7 +397,7 @@ class PlantasiaApp {
 
     const gainNode = this.audioCtx.createGain();
     gainNode.gain.setValueAtTime(0, startTime);
-    gainNode.gain.linearRampToValueAtTime(0.3, startTime + params.attack);
+    gainNode.gain.linearRampToValueAtTime(0.3 * (params.velocityGain || 1), startTime + params.attack);
     gainNode.gain.linearRampToValueAtTime(0.0, startTime + params.attack + params.release);
 
     const panNode = this.audioCtx.createStereoPanner();
