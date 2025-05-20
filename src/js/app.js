@@ -306,7 +306,7 @@ class PlantasiaApp {
     const midiActive = Object.keys(this.midiNotes).length > 0;
     if (!this.stopped || midiActive) {
       this.analyser.getByteTimeDomainData(this.dataArray);
-      if (this.trailFrames.length > 12) this.trailFrames.shift();
+      if (this.trailFrames.length > 8) this.trailFrames.shift(); // less dense, more classic
       this.trailFrames.push([...this.dataArray]);
     } else {
       if (this.trailFrames.length > 0) this.trailFrames.shift();
@@ -316,7 +316,8 @@ class PlantasiaApp {
     grad.addColorStop(0, this.currentWaveColor);
     grad.addColorStop(1, "#000000");
 
-    // Draw remaining trail frames (even when stopped, for fadeout effect)
+    // Classic, less dense visualization
+    this.ctx.lineWidth = 1.2;
     for (let t = 0; t < this.trailFrames.length; t++) {
       const data = this.trailFrames[t];
       const slice = this.canvas.width / data.length;
@@ -329,10 +330,10 @@ class PlantasiaApp {
         else this.ctx.lineTo(x, y);
         x += slice;
       }
-      const alpha = 0.06 + (t / this.trailFrames.length) * 0.13;
+      const alpha = 0.03 + (t / this.trailFrames.length) * 0.09;
       this.ctx.strokeStyle = grad;
       this.ctx.globalAlpha = alpha;
-      this.ctx.shadowBlur = 15;
+      this.ctx.shadowBlur = 8;
       this.ctx.shadowColor = this.currentWaveColor;
       this.ctx.stroke();
       this.ctx.shadowBlur = 0;
@@ -374,7 +375,10 @@ class PlantasiaApp {
   }
   stop() {
     this.stopped = true;
-    clearInterval(this.bpmTimer);
+    if (this.bpmTimer) {
+      clearInterval(this.bpmTimer);
+      this.bpmTimer = null;
+    }
   }
   onBpmChange() {
     this.bpm = parseInt(this.bpmSlider.value);
@@ -389,7 +393,7 @@ class PlantasiaApp {
       this.scheduleNotes(this.getScaleFromPreset());
   }
   scheduleNotes(scale) {
-    clearInterval(this.bpmTimer);
+    if (this.bpmTimer) clearInterval(this.bpmTimer);
     this.bpmTimer = setInterval(() => {
       if (!this.stopped) {
         const freq = scale[Math.floor(Math.random() * scale.length)];
