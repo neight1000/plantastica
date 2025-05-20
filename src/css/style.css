@@ -1,8 +1,8 @@
 body {
   margin: 0;
   padding: 0;
-  background: #1b1f23;
-  color: #eee;
+  background: #000;
+  color: #fff;
   font-family: 'Fira Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
   overflow: hidden;
 }
@@ -19,15 +19,16 @@ body {
   position: absolute;
   top: 16px;
   left: 16px;
-  background: rgba(40,60,40,0.81);
-  color: #d9ffd9;
+  background: rgba(0,0,0,0.85);
+  color: #fff;
   font-size: 1.05em;
   padding: 8px 16px 8px 12px;
-  border-radius: 8px;
+  border-radius: 0;
+  border: 1px solid #fff;
   z-index: 10;
   white-space: pre;
   font-family: inherit;
-  box-shadow: 0 0 16px #0f0a;
+  box-shadow: none;
   user-select: text;
   max-width: 96vw;
   max-height: 90vh;
@@ -39,17 +40,18 @@ body {
   top: 18px;
   z-index: 11;
   font-size: 32px;
-  background: #222;
-  color: #0fa;
-  border: none;
-  border-radius: 6px;
+  background: #000;
+  color: #fff;
+  border: 1px solid #fff;
+  border-radius: 0;
   padding: 2px 10px;
   cursor: pointer;
-  box-shadow: 0 0 10px #0fa4;
-  transition: background 0.18s;
+  box-shadow: none;
+  transition: background 0.18s, color 0.18s;
 }
 .drawer-toggle-btn:hover {
-  background: #0fa2;
+  background: #fff;
+  color: #000;
 }
 #drawer {
   position: absolute;
@@ -57,11 +59,12 @@ body {
   top: 0;
   width: 370px;
   min-height: 100vh;
-  background: #222b;
-  color: #0fa;
+  background: #111;
+  color: #fff;
   padding: 22px 24px 42px 20px;
-  box-shadow: -2px 0 32px #0fa3;
-  border-radius: 18px 0 0 18px;
+  box-shadow: none;
+  border-radius: 0;
+  border-left: 1px solid #fff;
   z-index: 12;
   font-size: 1em;
   transition: right 0.22s cubic-bezier(.33,1.61,.34,.98);
@@ -80,29 +83,37 @@ body {
 #drawer label {
   display: block;
   font-size: 1em;
-  color: #0fa;
+  color: #fff;
   margin-bottom: 2px;
   font-weight: bold;
 }
 #drawer select, #drawer input[type="range"] {
   width: 100%;
   margin: 2px 0 9px 0;
+  background: #000;
+  color: #fff;
+  border: 1px solid #fff;
+  border-radius: 0;
+}
+#drawer select:focus, #drawer input[type="range"]:focus {
+  outline: 1px solid #fff;
 }
 #drawer button {
-  background: #0fa;
-  color: #111;
-  border: none;
-  border-radius: 6px;
+  background: #000;
+  color: #fff;
+  border: 1px solid #fff;
+  border-radius: 0;
   padding: 7px 16px;
   font-size: 1.1em;
   font-family: inherit;
   margin: 5px 0 0 0;
   cursor: pointer;
-  box-shadow: 0 0 8px #0fa8;
-  transition: background 0.19s;
+  box-shadow: none;
+  transition: background 0.19s, color 0.19s;
 }
 #drawer button:hover {
-  background: #39fca4;
+  background: #fff;
+  color: #000;
 }
 #closeDrawer {
   position: absolute;
@@ -110,15 +121,17 @@ body {
   right: 10px;
   font-size: 1.6em;
   background: none;
-  color: #fa0;
-  box-shadow: none;
+  color: #fff;
   border: none;
+  box-shadow: none;
+  border-radius: 0;
   padding: 0 8px;
 }
 .mod-section {
   margin-top: 18px;
-  background: #242b;
-  border-radius: 9px;
+  background: #111;
+  border-radius: 0;
+  border: 1px solid #fff;
   padding: 8px 12px;
   display: flex;
   flex-direction: column;
@@ -133,7 +146,33 @@ body {
   min-width: 70px;
   font-size: 0.99em;
   margin: 0;
+  color: #fff;
 }
 input[type="range"] {
-  accent-color: #0fa;
+  accent-color: #fff;
+  background: #000;
+  border: 1px solid #fff;
+  border-radius: 0;
+  height: 2px;
+}
+input[type="range"]::-webkit-slider-thumb {
+  background: #fff;
+  border: 1px solid #fff;
+  border-radius: 0;
+}
+input[type="range"]::-moz-range-thumb {
+  background: #fff;
+  border: 1px solid #fff;
+  border-radius: 0;
+}
+input[type="range"]::-ms-thumb {
+  background: #fff;
+  border: 1px solid #fff;
+  border-radius: 0;
+}
+input[type="range"]::-webkit-slider-thumb:active {
+  background: #fff;
+}
+input[type="range"]:focus {
+  outline: 1px solid #fff;
 }
