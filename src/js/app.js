@@ -1,4 +1,5 @@
-// Plantastica v2 main logic: full featured synth with all controls as in the advanced HTML
+// Plantastica v2 main logic: full-featured synth with all controls as in the advanced HTML
+// Now with Akai MPK mini MIDI mapping: dials map to sliders, keyboard triggers synth
 class PlantasiaApp {
   constructor() {
     // DOM cache
@@ -47,6 +48,19 @@ class PlantasiaApp {
     this.bpmTimer = null;
     this.animationFrameId = null;
     this.resizeTimeout = null;
+
+    // MPK Mini specific: Mapping CCs to sliders
+    this.mpminiCCMap = {
+      1:   'lfoAmtSlider',   // Knob 1: LFO Amt
+      2:   'lfoRateSlider',  // Knob 2: LFO Rate
+      3:   'filterSlider',   // Knob 3: Filter
+      4:   'volumeSlider',   // Knob 4: Volume
+      5:   'delaySlider',    // Knob 5: Delay
+      6:   'echoSlider',     // Knob 6: Echo
+      7:   'bpmSlider',      // Knob 7: BPM
+      8:   'freqSlider'      // Knob 8: Frequency offset (if available)
+      // You can customize these mappings as needed
+    };
 
     // UI
     this.openDrawerBtn.addEventListener('click', () => this.openDrawer());
@@ -119,6 +133,28 @@ class PlantasiaApp {
     const channel = data[0] & 0x0f;
     const note = data[1];
     const velocity = data[2];
+
+    // CC - Akai MPK Mini dials mapping
+    if ((data[0] & 0xf0) === 0xB0) { // CC message
+      const cc = note;
+      const value = velocity;
+      if (cc in this.mpminiCCMap) {
+        const sliderId = this.mpminiCCMap[cc];
+        const slider = this.$(sliderId);
+        if (slider) {
+          // Akai dials send 0-127; map to slider's range
+          const min = Number(slider.min);
+          const max = Number(slider.max);
+          // Special case for BPM (often range 40-240) and some others
+          let newValue = min + (value / 127) * (max - min);
+          if (sliderId === 'bpmSlider') newValue = Math.round(newValue);
+          slider.value = newValue;
+          // Trigger appropriate updates
+          slider.dispatchEvent(new Event('input'));
+        }
+      }
+      return; // Don't keep processing as note/velocity
+    }
 
     // Honor "all" channel (-1)
     if (this.midiChannel !== -1 && channel !== this.midiChannel) return;
@@ -343,10 +379,15 @@ class PlantasiaApp {
     // Stop any active MIDI notes
     if (this.midiNotes) {
       Object.keys(this.midiNotes).forEach(note => this.noteOffMIDI(Number(note)));
+      this.midiNotes = {};
     }
 
-    // Always stop the animation
+    // Always stop the animation and clear the waveform instantly
     this.stopAnimation();
+    this.trailFrames = [];
+    if (this.ctx) {
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
   }
   onBpmChange() {
     this.bpm = parseInt(this.bpmSlider.value);
