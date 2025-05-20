@@ -1,6 +1,7 @@
+// Plantastica v2 main logic: full featured synth with all controls as in the advanced HTML
 class PlantasiaApp {
   constructor() {
-    // DOM cache...
+    // DOM cache
     this.$ = id => document.getElementById(id);
     this.canvas = this.$('waveCanvas');
     this.ctx = this.canvas.getContext('2d');
@@ -329,8 +330,8 @@ class PlantasiaApp {
   stop() {
     this.stopped = true;
     clearInterval(this.bpmTimer);
-    this.stopAnimation();
-    // Disconnect all active notes (sequencer)
+
+    // Stop sequencer notes
     for (const note of this.polyNotes) {
       if (note.osc) {
         try { note.osc.stop(); } catch {}
@@ -338,8 +339,14 @@ class PlantasiaApp {
       }
     }
     this.polyNotes = [];
-    // Disconnect all active MIDI notes
-    Object.keys(this.midiNotes).forEach(note => this.noteOffMIDI(Number(note)));
+
+    // Stop any active MIDI notes
+    if (this.midiNotes) {
+      Object.keys(this.midiNotes).forEach(note => this.noteOffMIDI(Number(note)));
+    }
+
+    // Always stop the animation
+    this.stopAnimation();
   }
   onBpmChange() {
     this.bpm = parseInt(this.bpmSlider.value);
