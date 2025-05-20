@@ -1,5 +1,5 @@
 // Plantastica v2 main logic: full featured synth with all controls as in the advanced HTML
-// Universal MIDI support for knobs (CCs), keys, and improved robust STOP
+// Universal MIDI support for knobs (CCs), keys, and STOP with visualizer fadeout (original design)
 
 class PlantasiaApp {
   constructor() {
@@ -228,10 +228,10 @@ class PlantasiaApp {
       }
       delete this.midiNotes[note];
     }
-    // Stop animation if nothing is playing
+    // Visualizer fadeout logic: let animate() finish the fade.
     if (Object.keys(this.midiNotes).length === 0 && this.stopped) {
-      this.stopAnimation();
-      this.clearVisualizer();
+      // Do not clear visualization instantly; let it fade.
+      // this.stopAnimation(); // Do not call here!
     }
   }
 
@@ -312,26 +312,24 @@ class PlantasiaApp {
     this.animationRunning = false;
     if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId);
   }
-  clearVisualizer() {
-    this.trailFrames = [];
-    if (this.ctx) {
-      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    }
-  }
   animate() {
     if (!this.ctx || !this.analyser || !this.animationRunning) return;
     this.animationFrameId = requestAnimationFrame(() => this.animate());
-    this.analyser.getByteTimeDomainData(this.dataArray);
-    this.ctx.fillStyle = "rgba(0, 0, 0, 0.06)";
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-    if (this.trailFrames.length > 12) this.trailFrames.shift();
-    this.trailFrames.push([...this.dataArray]);
+    // Only push new frame data if not stopped
+    if (!this.stopped) {
+      this.analyser.getByteTimeDomainData(this.dataArray);
+      if (this.trailFrames.length > 12) this.trailFrames.shift();
+      this.trailFrames.push([...this.dataArray]);
+    } else {
+      // On stop, gradually fade out by shifting trailFrames
+      if (this.trailFrames.length > 0) this.trailFrames.shift();
+    }
 
     const grad = this.ctx.createLinearGradient(0, 0, this.canvas.width, 0);
     grad.addColorStop(0, this.currentWaveColor);
     grad.addColorStop(1, "#000000");
 
+    // Draw remaining trail frames (even when stopped, for fadeout effect)
     for (let t = 0; t < this.trailFrames.length; t++) {
       const data = this.trailFrames[t];
       const slice = this.canvas.width / data.length;
@@ -352,6 +350,11 @@ class PlantasiaApp {
       this.ctx.stroke();
       this.ctx.shadowBlur = 0;
       this.ctx.globalAlpha = 1.0;
+    }
+
+    // When stopped and no more trailFrames, stop animation
+    if (this.stopped && this.trailFrames.length === 0) {
+      this.stopAnimation();
     }
   }
   initAudio() {
@@ -400,10 +403,8 @@ class PlantasiaApp {
       Object.keys(this.midiNotes).forEach(note => this.noteOffMIDI(Number(note)));
       this.midiNotes = {};
     }
-
-    // Always stop the animation and clear the waveform instantly
-    this.stopAnimation();
-    this.clearVisualizer();
+    // DO NOT clear trailFrames or canvas: let animation fade out waveform naturally!
+    // Animation will stop itself once trailFrames is empty.
   }
   onBpmChange() {
     this.bpm = parseInt(this.bpmSlider.value);
