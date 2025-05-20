@@ -1,3 +1,4 @@
+/* plantasia.css */
 :root {
   --font-main: 'Space Mono', 'Fira Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
   --color-bg: #000;
@@ -47,6 +48,16 @@ body {
   max-width: 96vw;
   max-height: 90vh;
   overflow-y: auto;
+
+  /* Fade-in/out */
+  display: block;
+  opacity: 1;
+  transition: opacity 0.5s ease;
+}
+
+/* Hidden state for fade-out */
+#infoDisplay.hidden {
+  opacity: 0;
 }
 
 /* Drawer Toggle Button */
@@ -65,7 +76,8 @@ body {
   box-shadow: none;
   transition: background 0.18s, color 0.18s;
 }
-.drawer-toggle-btn:hover, .drawer-toggle-btn:focus-visible {
+.drawer-toggle-btn:hover,
+.drawer-toggle-btn:focus-visible {
   background: var(--color-fg);
   color: var(--color-bg);
   outline: 2px solid var(--color-fg);
@@ -136,7 +148,8 @@ body {
   box-shadow: none;
   transition: background 0.19s, color 0.19s;
 }
-#drawer button:hover, #drawer button:focus-visible {
+#drawer button:hover,
+#drawer button:focus-visible {
   background: var(--color-fg);
   color: var(--color-bg);
   outline: 2px solid var(--color-fg);
