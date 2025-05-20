@@ -1,33 +1,44 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+:root {
+  --font-main: 'Space Mono', 'Fira Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+  --color-bg: #000;
+  --color-fg: #fff;
+  --color-accent: #111;
+  --color-border: #fff;
+  --font-size-base: 11px;
+  --spacing-base: 9px;
+  --drawer-width: 370px;
+}
 
 body {
   margin: 0;
   padding: 0;
-  background: #000;
-  color: #fff;
-  font-family: 'Space Mono', 'Fira Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-main);
   overflow: hidden;
-  font-size: 9px; /* Set global font size */
+  font-size: var(--font-size-base);
 }
+
 #waveCanvas {
   position: fixed;
   left: 0; top: 0; right: 0; bottom: 0;
   width: 100vw;
   height: 100vh;
   z-index: 0;
-  background: #000;
+  background: var(--color-bg);
   display: block;
 }
+
 #infoDisplay {
   position: absolute;
   top: 16px;
   left: 16px;
   background: rgba(0,0,0,0.85);
-  color: #fff;
-  font-size: 9px;
+  color: var(--color-fg);
+  font-size: var(--font-size-base);
   padding: 8px 16px 8px 12px;
   border-radius: 0;
-  border: 1px solid #fff;
+  border: 1px solid var(--color-border);
   z-index: 10;
   white-space: pre;
   font-family: inherit;
@@ -37,104 +48,119 @@ body {
   max-height: 90vh;
   overflow-y: auto;
 }
+
+/* Drawer Toggle Button */
 .drawer-toggle-btn {
   position: absolute;
   right: 20px;
   top: 18px;
   z-index: 11;
-  font-size: 9px;
-  background: #000;
-  color: #fff;
-  border: 1px solid #fff;
+  font-size: var(--font-size-base);
+  background: var(--color-bg);
+  color: var(--color-fg);
+  border: 1px solid var(--color-border);
   border-radius: 0;
   padding: 2px 10px;
   cursor: pointer;
   box-shadow: none;
   transition: background 0.18s, color 0.18s;
 }
-.drawer-toggle-btn:hover {
-  background: #fff;
-  color: #000;
+.drawer-toggle-btn:hover, .drawer-toggle-btn:focus-visible {
+  background: var(--color-fg);
+  color: var(--color-bg);
+  outline: 2px solid var(--color-fg);
 }
+
+/* Drawer Panel */
 #drawer {
   position: absolute;
   right: 0;
   top: 0;
-  width: 370px;
+  width: var(--drawer-width);
   min-height: 100vh;
-  background: #111;
-  color: #fff;
+  background: var(--color-accent);
+  color: var(--color-fg);
   padding: 22px 24px 42px 20px;
   box-shadow: none;
   border-radius: 0;
-  border-left: 1px solid #fff;
+  border-left: 1px solid var(--color-border);
   z-index: 12;
-  font-size: 9px;
+  font-size: var(--font-size-base);
   transition: right 0.22s cubic-bezier(.33,1.61,.34,.98);
   display: flex;
   flex-direction: column;
   gap: 15px;
 }
 #drawer.closed {
-  right: -370px;
+  right: calc(-1 * var(--drawer-width));
   pointer-events: none;
 }
 #drawer.open {
   right: 0;
   pointer-events: auto;
 }
+
 #drawer label {
   display: block;
-  font-size: 9px;
-  color: #fff;
+  font-size: var(--font-size-base);
+  color: var(--color-fg);
   margin-bottom: 2px;
   font-weight: bold;
 }
-#drawer select, #drawer input[type="range"] {
+
+#drawer select,
+#drawer input[type="range"] {
   width: 100%;
   margin: 2px 0 9px 0;
-  background: #000;
-  color: #fff;
-  border: 1px solid #fff;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  border: 1px solid var(--color-border);
   border-radius: 0;
 }
-#drawer select:focus, #drawer input[type="range"]:focus {
-  outline: 1px solid #fff;
+
+#drawer select:focus,
+#drawer input[type="range"]:focus {
+  outline: 2px solid var(--color-fg);
 }
+
 #drawer button {
-  background: #000;
-  color: #fff;
-  border: 1px solid #fff;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  border: 1px solid var(--color-border);
   border-radius: 0;
   padding: 7px 16px;
-  font-size: 9px;
+  font-size: var(--font-size-base);
   font-family: inherit;
   margin: 5px 0 0 0;
   cursor: pointer;
   box-shadow: none;
   transition: background 0.19s, color 0.19s;
 }
-#drawer button:hover {
-  background: #fff;
-  color: #000;
+#drawer button:hover, #drawer button:focus-visible {
+  background: var(--color-fg);
+  color: var(--color-bg);
+  outline: 2px solid var(--color-fg);
 }
+
 #closeDrawer {
   position: absolute;
   top: 12px;
   right: 10px;
-  font-size: 9px;
+  font-size: var(--font-size-base);
   background: none;
-  color: #fff;
+  color: var(--color-fg);
   border: none;
   box-shadow: none;
   border-radius: 0;
   padding: 0 8px;
 }
+
+/* Mod Section */
 .mod-section {
   margin-top: 18px;
-  background: #111;
+  background: var(--color-accent);
   border-radius: 0;
-  border: 1px solid #fff;
+  border: 1px solid var(--color-border);
   padding: 8px 12px;
   display: flex;
   flex-direction: column;
@@ -147,35 +173,56 @@ body {
 }
 .mod-row label {
   min-width: 70px;
-  font-size: 9px;
+  font-size: var(--font-size-base);
   margin: 0;
-  color: #fff;
+  color: var(--color-fg);
 }
+
+/* Range Sliders */
 input[type="range"] {
-  accent-color: #fff;
-  background: #000;
-  border: 1px solid #fff;
+  accent-color: var(--color-fg);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
   border-radius: 0;
   height: 2px;
 }
-input[type="range"]::-webkit-slider-thumb {
-  background: #fff;
-  border: 1px solid #fff;
+input[type="range"]::-webkit-slider-thumb,
+input[type="range"]::-webkit-slider-thumb:active {
+  background: var(--color-fg);
+  border: 1px solid var(--color-border);
   border-radius: 0;
 }
 input[type="range"]::-moz-range-thumb {
-  background: #fff;
-  border: 1px solid #fff;
+  background: var(--color-fg);
+  border: 1px solid var(--color-border);
   border-radius: 0;
 }
 input[type="range"]::-ms-thumb {
-  background: #fff;
-  border: 1px solid #fff;
+  background: var(--color-fg);
+  border: 1px solid var(--color-border);
   border-radius: 0;
 }
-input[type="range"]::-webkit-slider-thumb:active {
-  background: #fff;
-}
 input[type="range"]:focus {
-  outline: 1px solid #fff;
+  outline: 2px solid var(--color-fg);
+}
+
+/* Responsive Drawer for Small Screens */
+@media (max-width: 500px) {
+  :root {
+    --drawer-width: 98vw;
+    --font-size-base: 10px;
+  }
+  #drawer {
+    width: var(--drawer-width);
+    min-width: unset;
+    padding: 10px 6vw 22px 3vw;
+    font-size: var(--font-size-base);
+  }
+  #infoDisplay {
+    left: 4vw;
+    top: 10px;
+    font-size: var(--font-size-base);
+    padding: 5px 2vw 5px 2vw;
+    max-width: 92vw;
+  }
 }
