@@ -1,0 +1,12 @@
+# Ignore node modules (if using npm)
+node_modules/
+
+# Ignore Mac system files
+.DS_Store
+
+# Ignore log files
+*.log
+
+# Ignore build output (if you add a build process)
+dist/
+build/
