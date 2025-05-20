@@ -1,6 +1,3 @@
-// Plantastica v2 main logic: full featured synth with all controls as in the advanced HTML
-// Universal MIDI support for knobs (CCs), keys, and STOP with visualizer fadeout (original design)
-
 class PlantasiaApp {
   constructor() {
     // DOM cache
@@ -39,7 +36,7 @@ class PlantasiaApp {
     this.stopped = true;
     this.bpm = parseInt(this.bpmSlider.value);
     this.polyNotes = [];
-    this.midiNotes = {}; // key: midi note number, value: {osc, ...}
+    this.midiNotes = {};
     this.audioCtx = null;
     this.analyser = null;
     this.masterGain = null;
@@ -50,23 +47,18 @@ class PlantasiaApp {
     this.animationFrameId = null;
     this.resizeTimeout = null;
 
-    /**
-     * Universal MIDI mapping for knobs/CCs.
-     * If your MIDI device has 8 knobs, they almost always send CC 1-8, 10-19, 70-77, or similar.
-     * This will listen for *any* CC message and allow you to map the first 8 encountered to the synth controls
-     * in a logical order. You can also re-map live via the UI.
-     */
+    // Universal MIDI CC mapping
     this.ccToSliderOrder = [
-      'filterSlider',   // Cutoff
-      'delaySlider',    // Delay
-      'echoSlider',     // Echo/FX
-      'volumeSlider',   // Volume
-      'lfoRateSlider',  // LFO Rate
-      'lfoAmtSlider',   // LFO Amt
-      'bpmSlider',      // BPM
-      'freqSlider'      // Freq offset
+      'filterSlider',   // 1: Cutoff
+      'delaySlider',    // 2: Delay
+      'echoSlider',     // 3: Echo
+      'volumeSlider',   // 4: Volume
+      'lfoRateSlider',  // 5: LFO Rate
+      'lfoAmtSlider',   // 6: LFO Amt
+      'bpmSlider',      // 7: BPM
+      'freqSlider'      // 8: Freq Offset
     ];
-    this.ccToSliderMap = {}; // Will be filled dynamically on first use
+    this.ccToSliderMap = {}; // cc number -> slider id
 
     // UI
     this.openDrawerBtn.addEventListener('click', () => this.openDrawer());
@@ -140,15 +132,13 @@ class PlantasiaApp {
     const midi1 = data[1];
     const midi2 = data[2];
 
-    // --- Universal CC knob mapping ---
+    // Universal CC mapping: map first 8 unique CCs to sliders, then update those sliders
     if (status === 0xB0) { // CC message
       const cc = midi1;
       const value = midi2;
       let sliderId = this.ccToSliderMap[cc];
-
-      // Dynamically assign CCs to sliders in order, if not already mapped
       if (!sliderId) {
-        // Avoid duplicate assignment
+        // map to next unused slider
         for (let s = 0; s < this.ccToSliderOrder.length; ++s) {
           const candidate = this.ccToSliderOrder[s];
           if (Object.values(this.ccToSliderMap).indexOf(candidate) === -1) {
@@ -158,8 +148,6 @@ class PlantasiaApp {
           }
         }
       }
-
-      // Update slider if mapped
       if (sliderId) {
         const slider = this.$(sliderId);
         if (slider) {
@@ -174,9 +162,8 @@ class PlantasiaApp {
       return;
     }
 
-    // --- Note on/off handling for keys and pads ---
+    // Note on/off
     if (this.midiChannel !== -1 && channel !== this.midiChannel) return;
-
     if (status === 0x90 && midi2 > 0) {
       this.noteOnMIDI(midi1, midi2, channel);
     } else if (status === 0x80 || (status === 0x90 && midi2 === 0)) {
@@ -204,6 +191,7 @@ class PlantasiaApp {
     params.midiNote = note;
 
     this.midiNotes[note] = this.playInstrument(params, undefined, true);
+    this.stopped = false; // For fade logic: if keys held, not stopped!
     this.startAnimation();
   }
 
@@ -228,10 +216,9 @@ class PlantasiaApp {
       }
       delete this.midiNotes[note];
     }
-    // Visualizer fadeout logic: let animate() finish the fade.
+    // If no more MIDI notes are on and sequencer is stopped, start fade-out
     if (Object.keys(this.midiNotes).length === 0 && this.stopped) {
-      // Do not clear visualization instantly; let it fade.
-      // this.stopAnimation(); // Do not call here!
+      // Let animate() handle fade out by shifting trailFrames
     }
   }
 
@@ -315,13 +302,13 @@ class PlantasiaApp {
   animate() {
     if (!this.ctx || !this.analyser || !this.animationRunning) return;
     this.animationFrameId = requestAnimationFrame(() => this.animate());
-    // Only push new frame data if not stopped
-    if (!this.stopped) {
+    // Only push new frame data if not stopped or if MIDI notes are still held
+    const midiActive = Object.keys(this.midiNotes).length > 0;
+    if (!this.stopped || midiActive) {
       this.analyser.getByteTimeDomainData(this.dataArray);
       if (this.trailFrames.length > 12) this.trailFrames.shift();
       this.trailFrames.push([...this.dataArray]);
     } else {
-      // On stop, gradually fade out by shifting trailFrames
       if (this.trailFrames.length > 0) this.trailFrames.shift();
     }
 
@@ -403,7 +390,7 @@ class PlantasiaApp {
       Object.keys(this.midiNotes).forEach(note => this.noteOffMIDI(Number(note)));
       this.midiNotes = {};
     }
-    // DO NOT clear trailFrames or canvas: let animation fade out waveform naturally!
+    // Do NOT clear trailFrames or canvas: let animation fade out waveform naturally!
     // Animation will stop itself once trailFrames is empty.
   }
   onBpmChange() {
