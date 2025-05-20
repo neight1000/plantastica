@@ -375,23 +375,6 @@ class PlantasiaApp {
   stop() {
     this.stopped = true;
     clearInterval(this.bpmTimer);
-
-    // Stop sequencer notes
-    for (const note of this.polyNotes) {
-      if (note.osc) {
-        try { note.osc.stop(); } catch {}
-        try { note.osc.disconnect(); } catch {}
-      }
-    }
-    this.polyNotes = [];
-
-    // Stop any active MIDI notes
-    if (this.midiNotes) {
-      Object.keys(this.midiNotes).forEach(note => this.noteOffMIDI(Number(note)));
-      this.midiNotes = {};
-    }
-    // Do NOT clear trailFrames or canvas: let animation fade out waveform naturally!
-    // Animation will stop itself once trailFrames is empty.
   }
   onBpmChange() {
     this.bpm = parseInt(this.bpmSlider.value);
