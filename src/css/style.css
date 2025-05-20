@@ -1,9 +1,11 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+
 body {
   margin: 0;
   padding: 0;
   background: #000;
   color: #fff;
-  font-family: 'Fira Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+  font-family: 'Space Mono', 'Fira Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
   overflow: hidden;
   font-size: 9px; /* Set global font size */
 }
