@@ -80,9 +80,7 @@ class PlantasiaApp {
     this.openDrawerBtn.addEventListener('click', () => this.openDrawer());
     this.closeDrawerBtn.addEventListener('click', () => this.closeDrawer());
     this.presetSelect.addEventListener('change', () => this.onPresetChange());
-    this.waveformSelect.addEventListener('change', () => {
-      this.userWaveform = this.waveformSelect.value;
-    });
+    this.waveformSelect.addEventListener('change', () => this.userWaveform = this.waveformSelect.value);
     this.bpmSlider.addEventListener('input', () => this.onBpmChange());
     this.lfoRateSlider.addEventListener('input', () => this.updateLfoDisplay());
     this.lfoAmtSlider.addEventListener('input', () => this.updateLfoDisplay());
@@ -116,7 +114,7 @@ class PlantasiaApp {
     this.midiAccess = null;
     if (navigator.requestMIDIAccess) {
       navigator.requestMIDIAccess({ sysex: false }).then(
-        midiAccess => this.onMIDISuccess(midiAccess),
+        (midiAccess) => this.onMIDISuccess(midiAccess),
         () => this.onMIDIFailure()
       );
     } else {
@@ -128,11 +126,11 @@ class PlantasiaApp {
   onMIDISuccess(midiAccess) {
     this.midiAccess = midiAccess;
     for (let input of midiAccess.inputs.values()) {
-      input.onmidimessage = msg => this.handleMIDIMessage(msg);
+      input.onmidimessage = (msg) => this.handleMIDIMessage(msg);
     }
     midiAccess.onstatechange = () => {
       for (let input of midiAccess.inputs.values()) {
-        input.onmidimessage = msg => this.handleMIDIMessage(msg);
+        input.onmidimessage = (msg) => this.handleMIDIMessage(msg);
       }
     };
     console.log("MIDI ready!");
@@ -204,22 +202,22 @@ class PlantasiaApp {
 
   noteOffMIDI(note, channel) {
     if (this.midiNotes[note]) {
-      const { oscillators, gainNode, lfo, lfoGain } = this.midiNotes[note];
+      const {oscillators, gainNode, lfo, lfoGain} = this.midiNotes[note];
       if (oscillators) {
         for (const osc of oscillators) {
-          try { osc.stop(); } catch { }
-          try { osc.disconnect(); } catch { }
+          try { osc.stop(); } catch {}
+          try { osc.disconnect(); } catch {}
         }
       }
       if (gainNode) {
-        try { gainNode.disconnect(); } catch { }
+        try { gainNode.disconnect(); } catch {}
       }
       if (lfo) {
-        try { lfo.stop(); } catch { }
-        try { lfo.disconnect(); } catch { }
+        try { lfo.stop(); } catch {}
+        try { lfo.disconnect(); } catch {}
       }
       if (lfoGain) {
-        try { lfoGain.disconnect(); } catch { }
+        try { lfoGain.disconnect(); } catch {}
       }
       delete this.midiNotes[note];
     }
@@ -231,50 +229,43 @@ class PlantasiaApp {
   // --- Synthesis and app logic below (as before) ---
   getPresetOrder() {
     return [
-      'plants', 'mold', 'bacteria', 'mushrooms', 'harmony',
-      'plantasiaClassic', 'greenhouse', 'cosmicdew', 'daybeam', 'spiralback',
-      'rockflora', 'mycomurk', 'microburst', 'fibonaccishift'
+      'plants','mold','bacteria','mushrooms','harmony',
+      'plantasiaClassic','greenhouse','cosmicdew','daybeam','spiralback',
+      'rockflora','mycomurk','microburst','fibonaccishift'
     ];
   }
-
   getPresetSettings() {
     return {
-      // Truncated for brevity; all preset objects go here as in your original code
-      // ...
+      plants: { scale: [174, 220, 285, 396, 528, 660], color: "#00FF7F", waveform: "triangle", attack: 0.25, release: 2.0, detuneCents: [-7, 0, 7], pan: 0, filterType: "lowpass", filterFreq: 1800, delay: 0.4, echo: 0.34, reverb: 0.5 },
+      mold: { scale: [432, 639, 741, 852], color: "#8A2BE2", waveform: "sawtooth", attack: 0.04, release: 0.7, detuneCents: [-10, 0, 10], pan: () => Math.random()*2-1, filterType: "bandpass", filterFreq: 1100, delay: 0.5, echo: 0.51, reverb: 0.25 },
+      bacteria: { scale: [528, 554, 585, 728, 311], color: "#FF4500", waveform: "square", attack: 0.01, release: 0.18, detuneCents: [-12, 0, 12], pan: () => Math.random()*2-1, filterType: "highpass", filterFreq: 1400, delay: 0.2, echo: 0.17, reverb: 0.12 },
+      mushrooms: { scale: [417, 444, 528, 639, 392], color: "#FFD700", waveform: "sine", attack: 0.11, release: 1.1, detuneCents: [-6, 0, 6], pan: () => Math.sin(performance.now()/950), filterType: "lowpass", filterFreq: 1600, delay: 0.38, echo: 0.24, reverb: 0.44 },
+      harmony: { scale: [261, 329, 392, 466, 528, 639], color: "#00FFFF", waveform: "triangle", attack: 0.27, release: 2.1, detuneCents: [-8, 0, 8], pan: 0, filterType: "lowpass", filterFreq: 2400, delay: 0.22, echo: 0.32, reverb: 0.63 },
+      plantasiaClassic: { scale: [174, 220, 261.63, 329.63, 392, 523.25], color: "#8fd694", waveform: "triangle", attack: 0.35, release: 2.8, detuneCents: [-7, 0, 7], pan: 0, filterType: "lowpass", filterFreq: 1400, delay: 0.23, echo: 0.32, reverb: 0.44 },
+      greenhouse: { scale: [432, 512, 538, 576, 648], color: "#56f28c", waveform: "sine", attack: 0.45, release: 2.5, detuneCents: [-12, -3, 7, 12], pan: 0, filterType: "lowpass", filterFreq: 500, delay: 0.4, echo: 0.5, reverb: 0.65 },
+      cosmicdew: { scale: [528, 1056, 792, 1584, 2112], color: "#a5e6f4", waveform: "triangle", attack: 0.6, release: 3.2, detuneCents: [-24, 0, 11], pan: () => Math.sin(performance.now()/370), filterType: "highpass", filterFreq: 800, delay: 0.6, echo: 0.7, reverb: 1.0 },
+      daybeam: { scale: [440, 660, 880, 990, 1320], color: "#ffe56c", waveform: "sawtooth", attack: 0.09, release: 0.18, detuneCents: [-4, 0, 4], pan: () => Math.random()*2-1, filterType: "bandpass", filterFreq: 1200, delay: 0.2, echo: 0.4, reverb: 0.22 },
+      spiralback: { scale: [321.9, 521.3, 843.2, 987, 1598.3], color: "#ffb44f", waveform: "triangle", attack: 0.21, release: 0.89, detuneCents: [-13, 0, 8, 21], pan: 0, filterType: "lowpass", filterFreq: 987, delay: 0.618, echo: 0.382, reverb: 0.5 },
+      rockflora: { scale: [440, 660, 880, 1350, 1760], color: "#9df0ff", waveform: "square", attack: 0.03, release: 0.13, detuneCents: [-8, 0, 8], pan: () => Math.random()*2-1, filterType: "highpass", filterFreq: 1350, delay: 0.18, echo: 0.28, reverb: 0.15 },
+      mycomurk: { scale: [198, 259, 396, 420, 792], color: "#4e3e57", waveform: "sawtooth", attack: 0.22, release: 2.1, detuneCents: [-24, 0, 12, 19], pan: () => Math.random()*2-1, filterType: "lowpass", filterFreq: 420, delay: 0.35, echo: 0.45, reverb: 0.6 },
+      microburst: { scale: [333, 666, 999, 555, 777], color: "#ff9e57", waveform: "triangle", attack: 0.01, release: 0.07, detuneCents: [-18, 0, 4, 13], pan: () => Math.random()*2-1, filterType: "highpass", filterFreq: 1300, delay: 0.1, echo: 0.9, reverb: 0.18 },
+      fibonaccishift: { scale: [233, 377, 610, 987, 1597], color: "#aab6ff", waveform: "triangle", attack: 0.07, release: 0.3, detuneCents: [-21, 0, 5, 13], pan: 0, filterType: "bandpass", filterFreq: 987, delay: 0.377, echo: 0.233, reverb: 0.23 }
     };
   }
-
-  getPreset() {
-    return this.presetSelect.value;
-  }
-
-  getPresetParams() {
-    return this.presetSettings[this.getPreset()];
-  }
-
-  getScaleFromPreset() {
-    return this.getPresetParams().scale;
-  }
-
-  getColorFromPreset() {
-    return this.getPresetParams().color;
-  }
-
-  getWaveformFromPreset() {
-    return this.userWaveform || this.getPresetParams().waveform;
-  }
+  getPreset() { return this.presetSelect.value; }
+  getPresetParams() { return this.presetSettings[this.getPreset()]; }
+  getScaleFromPreset() { return this.getPresetParams().scale; }
+  getColorFromPreset() { return this.getPresetParams().color; }
+  getWaveformFromPreset() { return this.userWaveform || this.getPresetParams().waveform; }
 
   updateLfoDisplay() {
     this.lfoRateValue.textContent = this.lfoRateSlider.value;
     this.lfoAmtValue.textContent = this.lfoAmtSlider.value;
   }
-
   setVolume() {
-    if (this.masterGain) {
+    if (this.masterGain)
       this.masterGain.gain.value = parseFloat(this.volumeSlider.value) / 100;
-    }
   }
-
   updateDisplay() {
     const p = this.getPresetParams();
     this.infoDisplay.textContent =
@@ -287,37 +278,31 @@ class PlantasiaApp {
       "FILTER     : " + p.filterType + " " + this.filterSlider.value + "Hz\n" +
       "DELAY      : " + this.delaySlider.value + "s\n" +
       "ECHO       : " + this.echoSlider.value + "\n" +
-      "REVERB     : " + (0.3 + parseFloat(this.echoSlider.value) * 0.5).toFixed(2) + "\n" +
+      "REVERB     : " + (0.3 + parseFloat(this.echoSlider.value)*0.5).toFixed(2) + "\n" +
       "VOLUME     : " + this.volumeSlider.value + "\n" +
       "BPM        : " + this.bpmSlider.value +
       "\nLFO        : " + this.lfoDestSelect.value + " " + this.lfoRateSlider.value + "Hz x " + this.lfoAmtSlider.value;
   }
-
   toggleDisplay() {
     this.infoDisplay.style.display = this.infoDisplay.style.display === "none" ? "block" : "none";
   }
-
   setCanvasSize() {
     this.canvas.width = window.innerWidth;
     this.canvas.height = window.innerHeight;
   }
-
   debouncedResize() {
     clearTimeout(this.resizeTimeout);
     this.resizeTimeout = setTimeout(() => this.setCanvasSize(), 160);
   }
-
   startAnimation() {
     if (this.animationRunning) return;
     this.animationRunning = true;
     this.animate();
   }
-
   stopAnimation() {
     this.animationRunning = false;
     if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId);
   }
-
   animate() {
     if (!this.ctx || !this.analyser || !this.animationRunning) return;
     this.animationFrameId = requestAnimationFrame(() => this.animate());
@@ -354,11 +339,10 @@ class PlantasiaApp {
       this.ctx.globalAlpha = 1.0;
     }
   }
-
   initAudio() {
     if (this.audioCtx) return;
     this.setCanvasSize();
-    this.audioCtx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+    this.audioCtx = new (window.AudioContext || window.webkitAudioContext)({latencyHint: 'interactive'});
     this.analyser = this.audioCtx.createAnalyser();
     this.analyser.fftSize = 2048;
     this.bufferLength = this.analyser.frequencyBinCount;
@@ -376,7 +360,6 @@ class PlantasiaApp {
     this.masterGain.connect(this.audioCtx.destination);
     this.masterGain.connect(this.analyser);
   }
-
   start() {
     this.initAudio();
     this.stopped = false;
@@ -384,7 +367,6 @@ class PlantasiaApp {
     this.scheduleNotes(this.getScaleFromPreset());
     this.startAnimation();
   }
-
   stop() {
     this.stopped = true;
     clearInterval(this.bpmTimer);
@@ -392,8 +374,8 @@ class PlantasiaApp {
     // Stop sequencer notes
     for (const note of this.polyNotes) {
       if (note.osc) {
-        try { note.osc.stop(); } catch { }
-        try { note.osc.disconnect(); } catch { }
+        try { note.osc.stop(); } catch {}
+        try { note.osc.disconnect(); } catch {}
       }
     }
     this.polyNotes = [];
@@ -411,13 +393,11 @@ class PlantasiaApp {
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     }
   }
-
   onBpmChange() {
     this.bpm = parseInt(this.bpmSlider.value);
     if (!this.stopped)
       this.scheduleNotes(this.getScaleFromPreset());
   }
-
   onPresetChange() {
     this.userWaveform = null;
     this.waveformSelect.value = this.getPresetParams().waveform || "triangle";
@@ -425,7 +405,6 @@ class PlantasiaApp {
     if (!this.stopped)
       this.scheduleNotes(this.getScaleFromPreset());
   }
-
   scheduleNotes(scale) {
     clearInterval(this.bpmTimer);
     this.bpmTimer = setInterval(() => {
@@ -435,7 +414,6 @@ class PlantasiaApp {
       }
     }, 60000 / this.bpm);
   }
-
   playTone(freq) {
     if (!this.audioCtx) this.initAudio();
     if (this.audioCtx.state === "suspended") this.audioCtx.resume();
@@ -450,19 +428,17 @@ class PlantasiaApp {
 
     this.playInstrument(params);
   }
-
   playInstrument(params, when, forMIDI = false) {
     const now = this.audioCtx.currentTime;
     const startTime = when !== undefined ? when : now;
-
     // Clean up finished notes (for sequencer only)
     if (!forMIDI) {
       this.polyNotes = this.polyNotes.filter(n => n.endTime > now);
       if (this.polyNotes.length > 8) {
         const oldNote = this.polyNotes.shift();
         if (oldNote.osc) {
-          try { oldNote.osc.stop(); } catch { }
-          try { oldNote.osc.disconnect(); } catch { }
+          try { oldNote.osc.stop(); } catch {}
+          try { oldNote.osc.disconnect(); } catch {}
         }
       }
     }
@@ -527,12 +503,12 @@ class PlantasiaApp {
       const o = this.audioCtx.createOscillator();
       o.type = this.getWaveformFromPreset();
       o.detune.value = offset + drift;
-      o.frequency.value = params.freq * Math.pow(2, (offset + drift) / 1200);
+      o.frequency.value = params.freq * Math.pow(2, (offset + drift)/1200);
       o.connect(gainNode);
       o.start(startTime);
       o.stop(startTime + params.attack + params.release + 0.1);
-      o.onended = () => { try { o.disconnect(); } catch { } };
-      if (!forMIDI) this.polyNotes.push({ osc: o, endTime: startTime + params.attack + params.release + 0.1 });
+      o.onended = () => { try { o.disconnect(); } catch {} };
+      if (!forMIDI) this.polyNotes.push({osc: o, endTime: startTime + params.attack + params.release + 0.1});
       oscillators.push(o);
     });
 
@@ -547,16 +523,14 @@ class PlantasiaApp {
     gainNode.connect(this.analyser);
 
     if (forMIDI) {
-      return { oscillators, gainNode, lfo, lfoGain };
+      return {oscillators, gainNode, lfo, lfoGain};
     }
   }
-
   openDrawer() {
     this.drawer.classList.remove('closed');
     this.drawer.classList.add('open');
     this.openDrawerBtn.style.display = 'none';
   }
-
   closeDrawer() {
     this.drawer.classList.remove('open');
     this.drawer.classList.add('closed');
