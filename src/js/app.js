@@ -1,5 +1,6 @@
-// Plantastica v2 main logic: full-featured synth with all controls as in the advanced HTML
-// Now with Akai MPK mini MIDI mapping: dials map to sliders, keyboard triggers synth
+// Plantastica v2 main logic: full featured synth with all controls as in the advanced HTML
+// Now with robust Akai MPK Mini MIDI mappings for dials (CC) and keyboard, and rock-solid STOP/PLAY behavior
+
 class PlantasiaApp {
   constructor() {
     // DOM cache
@@ -49,17 +50,16 @@ class PlantasiaApp {
     this.animationFrameId = null;
     this.resizeTimeout = null;
 
-    // MPK Mini specific: Mapping CCs to sliders
+    // Akai MPK Mini: CC 1-8 map to the 8 knobs by default
     this.mpminiCCMap = {
-      1:   'lfoAmtSlider',   // Knob 1: LFO Amt
-      2:   'lfoRateSlider',  // Knob 2: LFO Rate
-      3:   'filterSlider',   // Knob 3: Filter
-      4:   'volumeSlider',   // Knob 4: Volume
-      5:   'delaySlider',    // Knob 5: Delay
-      6:   'echoSlider',     // Knob 6: Echo
-      7:   'bpmSlider',      // Knob 7: BPM
-      8:   'freqSlider'      // Knob 8: Frequency offset (if available)
-      // You can customize these mappings as needed
+      1: 'lfoAmtSlider',
+      2: 'lfoRateSlider',
+      3: 'filterSlider',
+      4: 'volumeSlider',
+      5: 'delaySlider',
+      6: 'echoSlider',
+      7: 'bpmSlider',
+      8: 'freqSlider'
     };
 
     // UI
@@ -134,42 +134,36 @@ class PlantasiaApp {
     const note = data[1];
     const velocity = data[2];
 
-    // CC - Akai MPK Mini dials mapping
+    // --- Akai MPK Mini CC Dials mapping ---
     if ((data[0] & 0xf0) === 0xB0) { // CC message
-      const cc = note;
-      const value = velocity;
+      const cc = data[1];
+      const value = data[2];
       if (cc in this.mpminiCCMap) {
         const sliderId = this.mpminiCCMap[cc];
         const slider = this.$(sliderId);
         if (slider) {
-          // Akai dials send 0-127; map to slider's range
           const min = Number(slider.min);
           const max = Number(slider.max);
-          // Special case for BPM (often range 40-240) and some others
           let newValue = min + (value / 127) * (max - min);
           if (sliderId === 'bpmSlider') newValue = Math.round(newValue);
           slider.value = newValue;
-          // Trigger appropriate updates
           slider.dispatchEvent(new Event('input'));
         }
       }
-      return; // Don't keep processing as note/velocity
+      return;
     }
 
-    // Honor "all" channel (-1)
+    // Keyboard mapping (notes)
     if (this.midiChannel !== -1 && channel !== this.midiChannel) return;
 
     if (status === 0x90 && velocity > 0) {
-      // Note on
       this.noteOnMIDI(note, velocity, channel);
     } else if (status === 0x80 || (status === 0x90 && velocity === 0)) {
-      // Note off
       this.noteOffMIDI(note, channel);
     }
   }
 
   noteOnMIDI(note, velocity, channel) {
-    // Convert MIDI note to freq
     const freq = 440 * Math.pow(2, (note - 69) / 12);
     const velGain = 0.1 + (velocity / 127) * 0.9;
 
@@ -188,14 +182,11 @@ class PlantasiaApp {
     params.velocityGain = velGain;
     params.midiNote = note;
 
-    // Store the oscillator for this note so we can turn it off
     this.midiNotes[note] = this.playInstrument(params, undefined, true);
-    // If visualizer isn't running, start it
     this.startAnimation();
   }
 
   noteOffMIDI(note, channel) {
-    // Only stop this MIDI note
     if (this.midiNotes[note]) {
       const {oscillators, gainNode, lfo, lfoGain} = this.midiNotes[note];
       if (oscillators) {
@@ -216,7 +207,6 @@ class PlantasiaApp {
       }
       delete this.midiNotes[note];
     }
-    // If no more MIDI notes are on and not running sequencer, stop visualizer
     if (Object.keys(this.midiNotes).length === 0 && this.stopped) {
       this.stopAnimation();
     }
