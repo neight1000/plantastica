@@ -1,5 +1,5 @@
 // Plantastica v2 main logic: full featured synth with all controls as in the advanced HTML
-// Now with robust Akai MPK Mini (K1-K8) MIDI mappings for dials and keyboard, and rock-solid STOP/PLAY behavior
+// Universal MIDI support for knobs (CCs), keys, and improved robust STOP
 
 class PlantasiaApp {
   constructor() {
@@ -51,30 +51,22 @@ class PlantasiaApp {
     this.resizeTimeout = null;
 
     /**
-     * AKAI MPK MINI (K1-K8) MIDI MAPPING
-     * Most Akai MPK Mini controllers send CC 70-77 for K1-K8 by default.
-     * If your MPK Mini is set differently, update the cc numbers here.
-     * 
-     * Mapping:
-     * K1 (CC70): Filter Cutoff      -> filterSlider
-     * K2 (CC71): Resonance (not present, use Delay) -> delaySlider
-     * K3 (CC72): LFO Rate           -> lfoRateSlider
-     * K4 (CC73): LFO Amount         -> lfoAmtSlider
-     * K5 (CC74): Echo/FX Amount     -> echoSlider
-     * K6 (CC75): Volume             -> volumeSlider
-     * K7 (CC76): BPM                -> bpmSlider
-     * K8 (CC77): Frequency offset   -> freqSlider
+     * Universal MIDI mapping for knobs/CCs.
+     * If your MIDI device has 8 knobs, they almost always send CC 1-8, 10-19, 70-77, or similar.
+     * This will listen for *any* CC message and allow you to map the first 8 encountered to the synth controls
+     * in a logical order. You can also re-map live via the UI.
      */
-    this.mpminiCCMap = {
-      70: 'filterSlider',   // K1
-      71: 'delaySlider',    // K2 (use delay for "resonance" knob if not present)
-      72: 'lfoRateSlider',  // K3
-      73: 'lfoAmtSlider',   // K4
-      74: 'echoSlider',     // K5
-      75: 'volumeSlider',   // K6
-      76: 'bpmSlider',      // K7
-      77: 'freqSlider'      // K8
-    };
+    this.ccToSliderOrder = [
+      'filterSlider',   // Cutoff
+      'delaySlider',    // Delay
+      'echoSlider',     // Echo/FX
+      'volumeSlider',   // Volume
+      'lfoRateSlider',  // LFO Rate
+      'lfoAmtSlider',   // LFO Amt
+      'bpmSlider',      // BPM
+      'freqSlider'      // Freq offset
+    ];
+    this.ccToSliderMap = {}; // Will be filled dynamically on first use
 
     // UI
     this.openDrawerBtn.addEventListener('click', () => this.openDrawer());
@@ -145,15 +137,30 @@ class PlantasiaApp {
     const data = event.data;
     const status = data[0] & 0xf0;
     const channel = data[0] & 0x0f;
-    const note = data[1];
-    const velocity = data[2];
+    const midi1 = data[1];
+    const midi2 = data[2];
 
-    // --- Akai MPK Mini K1-K8 MIDI CC Dials mapping ---
-    if ((data[0] & 0xf0) === 0xB0) { // CC message
-      const cc = data[1];
-      const value = data[2];
-      if (cc in this.mpminiCCMap) {
-        const sliderId = this.mpminiCCMap[cc];
+    // --- Universal CC knob mapping ---
+    if (status === 0xB0) { // CC message
+      const cc = midi1;
+      const value = midi2;
+      let sliderId = this.ccToSliderMap[cc];
+
+      // Dynamically assign CCs to sliders in order, if not already mapped
+      if (!sliderId) {
+        // Avoid duplicate assignment
+        for (let s = 0; s < this.ccToSliderOrder.length; ++s) {
+          const candidate = this.ccToSliderOrder[s];
+          if (Object.values(this.ccToSliderMap).indexOf(candidate) === -1) {
+            this.ccToSliderMap[cc] = candidate;
+            sliderId = candidate;
+            break;
+          }
+        }
+      }
+
+      // Update slider if mapped
+      if (sliderId) {
         const slider = this.$(sliderId);
         if (slider) {
           const min = Number(slider.min);
@@ -167,13 +174,13 @@ class PlantasiaApp {
       return;
     }
 
-    // Keyboard mapping (notes)
+    // --- Note on/off handling for keys and pads ---
     if (this.midiChannel !== -1 && channel !== this.midiChannel) return;
 
-    if (status === 0x90 && velocity > 0) {
-      this.noteOnMIDI(note, velocity, channel);
-    } else if (status === 0x80 || (status === 0x90 && velocity === 0)) {
-      this.noteOffMIDI(note, channel);
+    if (status === 0x90 && midi2 > 0) {
+      this.noteOnMIDI(midi1, midi2, channel);
+    } else if (status === 0x80 || (status === 0x90 && midi2 === 0)) {
+      this.noteOffMIDI(midi1, channel);
     }
   }
 
@@ -221,8 +228,10 @@ class PlantasiaApp {
       }
       delete this.midiNotes[note];
     }
+    // Stop animation if nothing is playing
     if (Object.keys(this.midiNotes).length === 0 && this.stopped) {
       this.stopAnimation();
+      this.clearVisualizer();
     }
   }
 
@@ -302,6 +311,12 @@ class PlantasiaApp {
   stopAnimation() {
     this.animationRunning = false;
     if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId);
+  }
+  clearVisualizer() {
+    this.trailFrames = [];
+    if (this.ctx) {
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
   }
   animate() {
     if (!this.ctx || !this.analyser || !this.animationRunning) return;
@@ -388,10 +403,7 @@ class PlantasiaApp {
 
     // Always stop the animation and clear the waveform instantly
     this.stopAnimation();
-    this.trailFrames = [];
-    if (this.ctx) {
-      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    }
+    this.clearVisualizer();
   }
   onBpmChange() {
     this.bpm = parseInt(this.bpmSlider.value);
